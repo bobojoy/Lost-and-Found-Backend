@@ -8,172 +8,178 @@ from dotenv import load_dotenv
 from flask_cors import CORS
 import os
 
-# Load environment variables from .env
+# Load environment variables
 load_dotenv()
 
-# App setup
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI',)
-app.config['SECRET_KEY'] = os.environ.get("SECRET_KEY")
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI')
+app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 
-# Import db and bcrypt from models.py (not initialized again here)
-from models import db, bcrypt, User,Item,Claim
+# Import models
+from models import db, bcrypt, User, Admin, LostItem, FoundItem, Claim, Comment
 
-# Initialize the database and bcrypt
 db.init_app(app)
 bcrypt.init_app(app)
-
-# Initialize migrations
 migrate = Migrate(app, db)
-
-# Initialize JWT
 jwt = JWTManager(app)
-
-# Enable CORS for the frontend
-# CORS(app, resources={r"/*": {"origins": "https://yourfrontendapp.com"}})  # Change to your frontend URL
-
-# Initialize API
 api = Api(app)
 
+# Enable CORS
+CORS(app)
 
-# Import models
-
-
-# User Registration Resource
+# User Registration
 class UserRegister(Resource):
     def post(self):
-        data = request.get_json() 
-        if "username" not in data or "password" not in data:
-            return {"error": "Missing inputs required"}, 422
+        data = request.get_json()
         try:
             user = User(
                 username=data['username'],
                 email=data['email']
             )
-            user.password_hash = data['password']
+            user.password = data['password']
             db.session.add(user)
             db.session.commit()
             session["user_id"] = user.id
             return make_response(user.to_dict(), 201)
         except IntegrityError:
-            return {"error": "Username already exists"}, 422
+            return {"error": "Username or email already exists"}, 422
         except Exception as e:
-            print(e)
             return make_response({"error": str(e)}, 422)
 
-# User Login Resource
+# User Login
 class UserLogin(Resource):
     def post(self):
-        data = request.get_json() 
-        if "email" not in data or "password" not in data:
-            return {"error": "Missing required fields"}, 422
-        
+        data = request.get_json()
         user = User.query.filter_by(email=data["email"]).first()
         if user and user.authenticate(data["password"]):
             session["user_id"] = user.id
-            return make_response({'user':f"{user.username} has logged in"}, 201)
-        else:
-            return make_response({"error": "Username or password incorrect"}, 401)
+            return make_response({"message": f"{user.username} logged in"}, 200)
+        return {"error": "Invalid credentials"}, 401
 
-class ItemResource(Resource):
-    # @jwt_required()  # Ensure the user is authenticated
+# LostItem Resource
+class LostItemResource(Resource):
     def get(self, item_id=None):
         if item_id:
-            item = Item.query.get(item_id)
+            item = LostItem.query.get(item_id)
             if not item:
-                return {"error": "Item not found"}, 404
+                return {"error": "Lost item not found"}, 404
             return item.to_dict(), 200
-        items = Item.query.all()
+        items = LostItem.query.all()
         return [item.to_dict() for item in items], 200
 
-    # @jwt_required()
+    @jwt_required()
     def post(self):
         data = request.get_json()
-        user_id = get_jwt_identity()  # Get the user from the JWT token
-
-        new_item = Item(
-            title=data['title'],
+        user_id = get_jwt_identity()
+        lost_item = LostItem(
+            name=data['name'],
             description=data['description'],
-            user_id=user_id,
-            status='lost',  # Assuming the status is 'lost' by default
-            reward=data.get('reward')
+            place_lost=data['place_lost'],
+            reward=data.get('reward'),
+            user_id=user_id
         )
-
-        db.session.add(new_item)
+        db.session.add(lost_item)
         db.session.commit()
-        return new_item.to_dict(), 201
+        return lost_item.to_dict(), 201
 
-    # @jwt_required()
-    def put(self, item_id):
-        item = Item.query.get(item_id)
-        if not item:
-            return {"error": "Item not found"}, 404
-
-        data = request.get_json()
-        item.title = data.get('title', item.title)
-        item.description = data.get('description', item.description)
-        item.reward = data.get('reward', item.reward)
-
-        db.session.commit()
-        return item.to_dict(), 200
-
-    # @jwt_required()
+    @jwt_required()
     def delete(self, item_id):
-        item = Item.query.get(item_id)
-        if not item:
-            return {"error": "Item not found"}, 404
-
-        db.session.delete(item)
+        lost_item = LostItem.query.get(item_id)
+        if not lost_item:
+            return {"error": "Lost item not found"}, 404
+        db.session.delete(lost_item)
         db.session.commit()
-        return {"message": "Item deleted successfully"}, 200
+        return {"message": "Lost item deleted"}, 200
 
-class ClaimItemResource(Resource):
-    # @jwt_required()
-    def post(self, item_id):
+# FoundItem Resource
+class FoundItemResource(Resource):
+    def get(self, item_id=None):
+        if item_id:
+            item = FoundItem.query.get(item_id)
+            if not item:
+                return {"error": "Found item not found"}, 404
+            return item.to_dict(), 200
+        items = FoundItem.query.all()
+        return [item.to_dict() for item in items], 200
+
+    @jwt_required()
+    def post(self):
         data = request.get_json()
         user_id = get_jwt_identity()
+        found_item = FoundItem(
+            name=data['name'],
+            description=data['description'],
+            place_found=data['place_found'],
+            reward=data.get('reward'),
+            user_id=user_id
+        )
+        db.session.add(found_item)
+        db.session.commit()
+        return found_item.to_dict(), 201
 
-        item = Item.query.get(item_id)
+# Claim Resource
+class ClaimItemResource(Resource):
+    @jwt_required()
+    def post(self, item_type, item_id):
+        user_id = get_jwt_identity()
+        item = None
+        if item_type == 'lost':
+            item = LostItem.query.get(item_id)
+        elif item_type == 'found':
+            item = FoundItem.query.get(item_id)
+
         if not item:
-            return {"error": "Item not found"}, 404
+            return {"error": f"{item_type.capitalize()} item not found"}, 404
 
-        claim = Claim(user_id=user_id, item_id=item.id)
+        claim = Claim(user_id=user_id, founditem_id=item_id if item_type == 'found' else None, lostitem_id=item_id if item_type == 'lost' else None)
         db.session.add(claim)
+        item.status = 'claimed'
         db.session.commit()
-
-        item.status = 'claimed'  # Update item status to 'claimed'
-        db.session.commit()
-
         return claim.to_dict(), 201
 
-# --- Admin Resources ---
+# Comment Resource
+class CommentResource(Resource):
+    def post(self, item_type, item_id):
+        data = request.get_json()
+        user_id = get_jwt_identity()
+        comment = Comment(
+            user_id=user_id,
+            lost_item_id=item_id if item_type == 'lost' else None,
+            found_item_id=item_id if item_type == 'found' else None,
+            content=data['content']
+        )
+        db.session.add(comment)
+        db.session.commit()
+        return comment.to_dict(), 201
 
+# Admin Approve Claim
 class AdminApproveClaim(Resource):
-    # @jwt_required()
+    @jwt_required()
     def post(self, claim_id):
         user_id = get_jwt_identity()
-        user = User.query.get(user_id)
-        if not user.is_admin():
+        admin = Admin.query.get(user_id)
+        if not admin:
             return {"error": "Admin privileges required"}, 403
-        
+
         claim = Claim.query.get(claim_id)
         if not claim:
             return {"error": "Claim not found"}, 404
-        
+
         claim.is_approved = True
         db.session.commit()
         return claim.to_dict(), 200
 
-# --- Register resources with the API ---
-
+# Register API Resources
 api.add_resource(UserRegister, '/signup')
 api.add_resource(UserLogin, '/login')
-api.add_resource(ItemResource, '/items', '/items/<int:item_id>')
-api.add_resource(ClaimItemResource, '/items/<int:item_id>/claim')
+api.add_resource(LostItemResource, '/lostitems', '/lostitems/<int:item_id>')
+api.add_resource(FoundItemResource, '/founditems', '/founditems/<int:item_id>')
+api.add_resource(ClaimItemResource, '/claim/<string:item_type>/<int:item_id>')
+api.add_resource(CommentResource, '/comments/<string:item_type>/<int:item_id>')
 api.add_resource(AdminApproveClaim, '/admin/claims/<int:claim_id>/approve')
 
-# --- Running the Flask app ---
+# Run the app
 if __name__ == "__main__":
     app.run(debug=True)
