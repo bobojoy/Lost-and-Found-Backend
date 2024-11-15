@@ -1,160 +1,227 @@
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
+from sqlalchemy.orm import validates
+from sqlalchemy_serializer import SerializerMixin
+from sqlalchemy.ext.hybrid import hybrid_property
 from flask_bcrypt import Bcrypt
+# from sqlalchemy import MetaData
 from datetime import datetime
 
-# Initialize db and bcrypt here (do not reinitialize them in app.py)
-db = SQLAlchemy()
+# Set up database and bcrypt for password hashing
+# metadata = MetaData()
+db = SQLAlchemy() 
+# db = SQLAlchemy(metadata=metadata)
 bcrypt = Bcrypt()
 
 # User model
-class User(db.Model):
+class User(db.Model, SerializerMixin):
     __tablename__ = 'users'
-    
+
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
-    is_admin = db.Column(db.Boolean, default=False)
-    
-    claims = db.relationship('Claim', backref='user', lazy=True)
-    items = db.relationship('Item', backref='user', lazy=True)
+    username = db.Column(db.String(100), nullable=False, unique=True)
+    _password_hash = db.Column(db.String(128))
+    email = db.Column(db.String(100))
 
-    def __init__(self, username, email):
-        self.username = username
-        self.email = email
+    # Relationships
+    lost_items = db.relationship('LostItem', back_populates='user', cascade='all, delete-orphan')
+    found_items = db.relationship('FoundItem', back_populates='user', cascade='all, delete-orphan')
+    claims = db.relationship('Claim', back_populates='user', cascade='all, delete-orphan')
+    reward_payments = db.relationship('RewardPayment', back_populates='user', cascade='all, delete-orphan')
 
-    def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
-    
+    serialize_rules = ("-lost_items.user", "-found_items.user", "-claims.user", "-reward_payments.user")
+
+    @validates('email')
+    def validate_email(self, key, value):
+        if '@' not in value:
+            raise ValueError('@ must be a valid email address')
+        return value
+
+    @hybrid_property
+    def password_hash(self):
+        raise Exception('Password hashes may not be viewed.')
+
+    @password_hash.setter
+    def password_hash(self, password):
+        password_hash = bcrypt.generate_password_hash(password.encode('utf-8'))
+        self._password_hash = password_hash.decode('utf-8')
+
+    @property
+    def password(self):
+        raise Exception('Password cannot be viewed.')
+
+    @password.setter
+    def password(self, password):
+        self.password_hash = password
+
     def authenticate(self, password):
-        return check_password_hash(self.password_hash, password)
+        return bcrypt.check_password_hash(self._password_hash, password.encode('utf-8'))
 
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "username": self.username,
-            "email": self.email,
-            "is_admin": self.is_admin
-        }
+    def get_reported_items(self):
+        # Get both lost and found items reported by the user
+        return {"lost_items": self.lost_items, "found_items": self.found_items}
 
-# Other models follow in similar structure...
+    def claim_found_item(self, found_item):
+        claim = Claim(user=self, found_item=found_item)
+        db.session.add(claim)
+        db.session.commit()
+
+    def pay_reward(self, reward, amount):
+        payment = RewardPayment(user=self, reward=reward, amount=amount)
+        db.session.add(payment)
+        db.session.commit()
+
+    def get_reward_history(self):
+        return self.reward_payments
 
 
-# Item model
-class Item(db.Model):
-    __tablename__ = 'items'
-    
+# Admin model
+class Admin(db.Model, SerializerMixin):
+    __tablename__ = 'admins'
+
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.String(255), nullable=False)
-    status = db.Column(db.String(50), default='lost')  # lost, claimed, etc.
-    reward = db.Column(db.Integer)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    
-    claims = db.relationship('Claim', backref='item', lazy=True)
-    comments = db.relationship('Comment', backref='item', lazy=True)
-    images = db.relationship('ItemImage', backref='item', lazy=True)
+    username = db.Column(db.String(100), nullable=False, unique=True)
+    email = db.Column(db.String(100), nullable=False, unique=True)
+    _password_hash = db.Column(db.String(128))
 
-    def __init__(self, title, description, user_id, status='lost', reward=None):
-        self.title = title
-        self.description = description
-        self.user_id = user_id
-        self.status = status
-        self.reward = reward
+    # Relationships
+    approved_reports = db.relationship('LostItem', back_populates='approved_by', cascade='all, delete-orphan')
+
+    @hybrid_property
+    def password_hash(self):
+        raise Exception('Password hashes may not be viewed.')
+
+    @password_hash.setter
+    def password_hash(self, password):
+        password_hash = bcrypt.generate_password_hash(password.encode('utf-8'))
+        self._password_hash = password_hash.decode('utf-8')
+
+    def authenticate(self, password):
+        return bcrypt.check_password_hash(self._password_hash, password.encode('utf-8'))
+
+    serialize_rules = ("-approved_reports.approved_by",)
+
     
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "title": self.title,
-            "description": self.description,
-            "status": self.status,
-            "reward": self.reward,
-            "user_id": self.user_id
-        }
+    def approve_lost_item(self, lost_item):
+        lost_item.status = 'approved'
+        lost_item.approved_by = self
+        db.session.commit()
+
+    def update_found_item_image(self, found_item, image_url):
+        found_item.image_url = image_url
+        db.session.commit()
+
+    def get_reward_payment_history(self):
+        # View all reward payments made by users
+        return RewardPayment.query.all()
+
+
+# LostItem model
+class LostItem(db.Model, SerializerMixin):
+    __tablename__ = 'lostitems'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(50), default='lost')  # lost, claimed, approved, etc.
+    reward = db.Column(db.Integer)
+    place_lost = db.Column(db.String(100))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    approved_by_id = db.Column(db.Integer, db.ForeignKey('admins.id'))
+    image_url = db.Column(db.String(255))
+
+    # Relationships
+    user = db.relationship('User', back_populates='lost_items')
+    approved_by = db.relationship('Admin', back_populates='approved_reports')
+    claims = db.relationship('Claim', back_populates='lost_item')
+
+    serialize_rules = ("-user.lost_items", "-approved_by.approved_reports", "-claims.lost_item")
+
+
+# FoundItem model
+class FoundItem(db.Model, SerializerMixin):
+    __tablename__ = 'founditems'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(255), nullable=False)
+    status = db.Column(db.String(50), default='found')  # found, claimed, etc.
+    reward = db.Column(db.Integer)
+    place_found = db.Column(db.String(100))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    image_url = db.Column(db.String(255))
+
+    # Relationships
+    user = db.relationship('User', back_populates='found_items')
+    claims = db.relationship('Claim', back_populates='found_item')
+
+    serialize_rules = ("-user.found_items", "-claims.found_item")
+
 
 # Claim model
-class Claim(db.Model):
+class Claim(db.Model, SerializerMixin):
     __tablename__ = 'claims'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    item_id = db.Column(db.Integer, db.ForeignKey('items.id'), nullable=False)
+    founditem_id = db.Column(db.Integer, db.ForeignKey('founditems.id'), nullable=False)
+    lostitem_id = db.Column(db.Integer, db.ForeignKey('lostitems.id'))
     is_approved = db.Column(db.Boolean, default=False)
-    
-    def __init__(self, user_id, item_id):
-        self.user_id = user_id
-        self.item_id = item_id
-    
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "item_id": self.item_id,
-            "is_approved": self.is_approved
-        }
 
-# Reward model (optional)
-class Reward(db.Model):
+    # Relationships
+    user = db.relationship('User', back_populates='claims')
+    found_item = db.relationship('FoundItem', back_populates='claims')
+    lost_item = db.relationship('LostItem', back_populates='claims')
+
+    serialize_rules = ("-user.claims", "-found_item.claims", "-lost_item.claims")
+
+
+# Reward model
+class Reward(db.Model, SerializerMixin):
     __tablename__ = 'rewards'
-    
+
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(255), nullable=False)
     points = db.Column(db.Integer, nullable=False)
 
-    def __init__(self, title, description, points):
-        self.title = title
-        self.description = description
-        self.points = points
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "title": self.title,
-            "description": self.description,
-            "points": self.points
-        }
-
-# Comment model
-class Comment(db.Model):
-    __tablename__ = 'comments'
     
+    reward_payments = db.relationship('RewardPayment', back_populates='reward', cascade='all, delete-orphan')
+
+    serialize_rules = ('-reward_payments.reward',)
+
+
+# RewardPayment model
+class RewardPayment(db.Model, SerializerMixin):
+    __tablename__ = 'reward_payments'
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    item_id = db.Column(db.Integer, db.ForeignKey('items.id'), nullable=False)
-    content = db.Column(db.String(255), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    def __init__(self, user_id, item_id, content):
-        self.user_id = user_id
-        self.item_id = item_id
-        self.content = content
-    
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "user_id": self.user_id,
-            "item_id": self.item_id,
-            "content": self.content,
-            "created_at": self.created_at
-        }
+    reward_id = db.Column(db.Integer, db.ForeignKey('rewards.id'), nullable=False)
+    amount = db.Column(db.Integer, nullable=False)
+    date_paid = db.Column(db.DateTime, default=datetime.utcnow)
 
-# ItemImage model
-class ItemImage(db.Model):
-    __tablename__ = 'item_images'
-    
+    # Relationships
+    user = db.relationship('User', back_populates='reward_payments')
+    reward = db.relationship('Reward', back_populates='reward_payments')
+
+    serialize_rules = ('-user.reward_payments', '-reward.reward_payments')
+
+
+# Comment model
+class Comment(db.Model, SerializerMixin):
+    __tablename__ = 'comments'
+
     id = db.Column(db.Integer, primary_key=True)
-    item_id = db.Column(db.Integer, db.ForeignKey('items.id'), nullable=False)
-    url = db.Column(db.String(255), nullable=False)
-    
-    def __init__(self, item_id, url):
-        self.item_id = item_id
-        self.url = url
-    
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "item_id": self.item_id,
-            "url": self.url
-        }
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    lost_item_id = db.Column(db.Integer, db.ForeignKey('lostitems.id'))
+    found_item_id = db.Column(db.Integer, db.ForeignKey('founditems.id'))
+    content = db.Column(db.Text, nullable=False)
+
+    user = db.relationship('User')
+    lost_item = db.relationship('LostItem', back_populates='comments')
+    found_item = db.relationship('FoundItem', back_populates='comments')
+
+    serialize_rules = ("-user.comments", "-lost_item.comments", "-found_item.comments")
+
+
+LostItem.comments = db.relationship('Comment', back_populates='lost_item', cascade='all, delete-orphan')
+FoundItem.comments = db.relationship('Comment', back_populates='found_item', cascade='all, delete-orphan')
