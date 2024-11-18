@@ -94,6 +94,10 @@ with app.app_context():
     claim3 = Claim(user=u3, found_item=f3, lost_item=l3, is_approved=True)
     claim4 = Claim(user=u4, found_item=f4, lost_item=l4, is_approved=True)
     claim5 = Claim(user=u5, found_item=f5, lost_item=l5, is_approved=False)
+     claims = [claim1, claim2, claim3, claim4, claim5]
+    db.session.add_all(claims)
+    db.session.commit()
+
 
 
    
