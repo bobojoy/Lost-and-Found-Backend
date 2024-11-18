@@ -82,7 +82,7 @@ with app.app_context():
     l20 = LostItem(name="Lost Wifi", description="A white wifi .", reward=20, place_lost="Turkana", user=u20, image_url="https://example.com/lost_keys.jpg")
     
 
-    lost_items = [l1, l2, l3, l4, l5]
+    lost_items = [l1, l2, l3, l4, , l6, l7, l8, l9, l10, l11, l12, l13, l14, l15, l16, l17, l18, l19, l20]
     db.session.add_all(lost_items)
     db.session.commit()
     
@@ -97,7 +97,6 @@ with app.app_context():
      claims = [claim1, claim2, claim3, claim4, claim5]
     db.session.add_all(claims)
     db.session.commit()
-
-
-
-   
+    
+    
+    
