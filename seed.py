@@ -82,8 +82,35 @@ with app.app_context():
     l20 = LostItem(name="Lost Wifi", description="A white wifi .", reward=20, place_lost="Turkana", user=u20, image_url="https://example.com/lost_keys.jpg")
     
 
-    lost_items = [l1, l2, l3, l4, , l6, l7, l8, l9, l10, l11, l12, l13, l14, l15, l16, l17, l18, l19, l20]
+    lost_items = [l1, l2, l3, l4, l5, l6, l7, l8, l9, l10, l11, l12, l13, l14, l15, l16, l17, l18, l19, l20]
     db.session.add_all(lost_items)
+    db.session.commit()
+    print("Creating Found items...")
+
+    f1 = FoundItem(name="Lost Phone", description="A smartphone, black color.", reward=100, place_lost="Nairobi", user=u1, image_url="https://example.com/lost_phone.jpg")
+    f2 = FoundItem(name="Lost Wallet", description="A leather wallet with ID cards.", reward=50, place_lost="Mombasa", user=u2, image_url="https://example.com/lost_wallet.jpg")
+    f3 = FoundItem(name="Lost Watch", description="A gold wristwatch.", reward=200, place_lost="Kisumu", user=u3, image_url="https://example.com/lost_watch.jpg")
+    f4 = FoundItem(name="Lost Bag", description="A large brown bag with clothes.", reward=150, place_lost="Nakuru", user=u4, image_url="https://example.com/lost_bag.jpg")
+    f5 = FoundItem(name="Lost Keys", description="A set of house keys.", reward=20, place_lost="Eldoret", user=u5, image_url="https://example.com/lost_keys.jpg")
+    f6 = FoundItem(name="Lost Phone", description="A smartphone, black color.", reward=100, place_lost="kajiado", user=u6, image_url="https://example.com/lost_phone.jpg")
+    f7 = FoundItem(name="Lost Wallet", description="A leather wallet with ID cards.", reward=50, place_lost="Voi", user=u7, image_url="https://example.com/lost_wallet.jpg")
+    f8 = FoundItem(name="Lost Watch", description="A gold wristwatch.", reward=200, place_lost="Kapsabet", user=u8, image_url="https://example.com/lost_watch.jpg")
+    f9 = FoundItem(name="Lost Bag", description="A large brown bag with clothes.", reward=150, place_lost="Limuru", user=u9, image_url="https://example.com/lost_bag.jpg")
+    f10 = FoundItem(name="Lost Bottle", description="A set of blue bottles.", reward=20, place_lost="Kinangop", user=u10, image_url="https://example.com/lost_keys.jpg")
+    f11 = FoundItem(name="Lost AirPods", description="A white Oraimo pods .", reward=100, place_lost="Muranga", user=u11, image_url="https://example.com/lost_phone.jpg")
+    f12 = FoundItem(name="Lost Cable", description="A 5m cable .", reward=50, place_lost="Nyeri", user=u12, image_url="https://example.com/lost_wallet.jpg")
+    f13 = FoundItem(name="Lost Charger", description="A yellow fancy charger", reward=200, place_lost="Kilifi", user=u13, image_url="https://example.com/lost_watch.jpg")
+    f14 = FoundItem(name="Lost Extension", description="A white extension.", reward=150, place_lost="", user=u14, image_url="https://example.com/lost_bag.jpg")
+    f15 = FoundItem(name="Lost Jacket", description="A brown leather jacket.", reward=20, place_lost="Garissa", user=u15, image_url="https://example.com/lost_keys.jpg")
+    f16 = FoundItem(name="Lost Chairs", description="Grey fancy chair .", reward=100, place_lost="Wajir", user=u16, image_url="https://example.com/lost_phone.jpg")
+    f17 = FoundItem(name="Lost Laptop", description="A black Hp laptop.", reward=50, place_lost="Marsabit", user=u17, image_url="https://example.com/lost_wallet.jpg")
+    f18 = FoundItem(name="Lost Speaker", description="A black speaker.", reward=200, place_lost="Nandi", user=u18, image_url="https://example.com/lost_watch.jpg")
+    f19 = FoundItem(name="Lost Table", description="An orange grey table .", reward=150, place_lost="Narok", user=u19, image_url="https://example.com/lost_bag.jpg")
+    f20 = FoundItem(name="Lost Wifi", description="A white wifi .", reward=20, place_lost="Turkana", user=u20, image_url="https://example.com/lost_keys.jpg")
+    
+
+    found_items = [f1, f2, f3, f4,f5 , f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20]
+    db.session.add_all(found_items)
     db.session.commit()
     
      # Creating Claims...
@@ -94,7 +121,7 @@ with app.app_context():
     claim3 = Claim(user=u3, found_item=f3, lost_item=l3, is_approved=True)
     claim4 = Claim(user=u4, found_item=f4, lost_item=l4, is_approved=True)
     claim5 = Claim(user=u5, found_item=f5, lost_item=l5, is_approved=False)
-     claims = [claim1, claim2, claim3, claim4, claim5]
+    claims = [claim1, claim2, claim3, claim4, claim5]
     db.session.add_all(claims)
     db.session.commit()
     
