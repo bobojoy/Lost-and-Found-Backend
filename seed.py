@@ -99,4 +99,19 @@ with app.app_context():
     db.session.commit()
     
     
-    
+     # Creating Rewards...
+    print("Creating rewards...")
+
+    r1 = Reward(title="Reward for Lost Phone", description="Reward for returning a lost phone.", points=100)
+    r2 = Reward(title="Reward for Lost Wallet", description="Reward for returning a lost wallet.", points=50)
+    r3 = Reward(title="Reward for Lost Watch", description="Reward for returning a lost watch.", points=200)
+    r4 = Reward(title="Reward for Lost Bag", description="Reward for returning a lost bag.", points=150)
+    r5 = Reward(title="Reward for Lost Keys", description="Reward for returning lost keys.", points=20)
+
+    rewards = [r1, r2, r3, r4, r5]
+    db.session.add_all(rewards)
+    db.session.commit()
+
+
+
+   
