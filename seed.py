@@ -111,6 +111,35 @@ with app.app_context():
     rewards = [r1, r2, r3, r4, r5]
     db.session.add_all(rewards)
     db.session.commit()
+    
+    
+      # Creating RewardPayments...
+    print("Creating reward payments...")
+
+    rp1 = RewardPayment(user=u1, reward=r1, amount=100)
+    rp2 = RewardPayment(user=u2, reward=r2, amount=50)
+    rp3 = RewardPayment(user=u3, reward=r3, amount=200)
+    rp4 = RewardPayment(user=u4, reward=r4, amount=150)
+    rp5 = RewardPayment(user=u5, reward=r5, amount=20)
+
+    reward_payments = [rp1, rp2, rp3, rp4, rp5]
+    db.session.add_all(reward_payments)
+    db.session.commit()
+
+    # Creating Comments...
+    print("Creating comments...")
+
+    c1 = Comment(user=u1, lost_item=l1, content="I lost my phone, please let me know if you find it.")
+    c2 = Comment(user=u2, found_item=f2, content="I found a wallet. Can someone claim it?")
+    c3 = Comment(user=u3, lost_item=l3, content="My watch is very precious. Please help me find it.")
+    c4 = Comment(user=u4, found_item=f4, content="I found a bag near the park. Let me know if it’s yours.")
+    c5 = Comment(user=u5, lost_item=l5, content="I lost my keys! If anyone finds them, please contact me.")
+
+    comments = [c1, c2, c3, c4, c5]
+    db.session.add_all(comments)
+    db.session.commit()
+
+    print("Seeding done!")
 
 
 
