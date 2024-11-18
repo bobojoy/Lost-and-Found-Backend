@@ -47,4 +47,14 @@ with app.app_context():
     db.session.add_all(users)
     db.session.commit()
 
-   
+    # Creating Admins...
+    print("Creating admins...")
+
+    admin1 = Admin(username="admin1", email="admin1@admin.com", password="adminpass")
+    admin2 = Admin(username="admin2", email="admin2@admin.com", password="adminpass")
+
+    admins = [admin1, admin2]
+    db.session.add_all(admins)
+    db.session.commit()
+
+    
