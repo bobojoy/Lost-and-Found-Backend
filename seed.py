@@ -57,4 +57,33 @@ with app.app_context():
     db.session.add_all(admins)
     db.session.commit()
 
+    # Creating LostItems...
+    print("Creating lost items...")
+
+    l1 = LostItem(name="Lost Phone", description="A smartphone, black color.", reward=100, place_lost="Nairobi", user=u1, image_url="https://example.com/lost_phone.jpg")
+    l2 = LostItem(name="Lost Wallet", description="A leather wallet with ID cards.", reward=50, place_lost="Mombasa", user=u2, image_url="https://example.com/lost_wallet.jpg")
+    l3 = LostItem(name="Lost Watch", description="A gold wristwatch.", reward=200, place_lost="Kisumu", user=u3, image_url="https://example.com/lost_watch.jpg")
+    l4 = LostItem(name="Lost Bag", description="A large brown bag with clothes.", reward=150, place_lost="Nakuru", user=u4, image_url="https://example.com/lost_bag.jpg")
+    l5 = LostItem(name="Lost Keys", description="A set of house keys.", reward=20, place_lost="Eldoret", user=u5, image_url="https://example.com/lost_keys.jpg")
+    l6 = LostItem(name="Lost Phone", description="A smartphone, black color.", reward=100, place_lost="kajiado", user=u6, image_url="https://example.com/lost_phone.jpg")
+    l7 = LostItem(name="Lost Wallet", description="A leather wallet with ID cards.", reward=50, place_lost="Voi", user=u7, image_url="https://example.com/lost_wallet.jpg")
+    l8 = LostItem(name="Lost Watch", description="A gold wristwatch.", reward=200, place_lost="Kapsabet", user=u8, image_url="https://example.com/lost_watch.jpg")
+    l9 = LostItem(name="Lost Bag", description="A large brown bag with clothes.", reward=150, place_lost="Limuru", user=u9, image_url="https://example.com/lost_bag.jpg")
+    l10 = LostItem(name="Lost Bottle", description="A set of blue bottles.", reward=20, place_lost="Kinangop", user=u10, image_url="https://example.com/lost_keys.jpg")
+    l11 = LostItem(name="Lost AirPods", description="A white Oraimo pods .", reward=100, place_lost="Muranga", user=u11, image_url="https://example.com/lost_phone.jpg")
+    l12 = LostItem(name="Lost Cable", description="A 5m cable .", reward=50, place_lost="Nyeri", user=u12, image_url="https://example.com/lost_wallet.jpg")
+    l13 = LostItem(name="Lost Charger", description="A yellow fancy charger", reward=200, place_lost="Kilifi", user=u13, image_url="https://example.com/lost_watch.jpg")
+    l14 = LostItem(name="Lost Extension", description="A white extension.", reward=150, place_lost="", user=u14, image_url="https://example.com/lost_bag.jpg")
+    l15 = LostItem(name="Lost Jacket", description="A brown leather jacket.", reward=20, place_lost="Garissa", user=u15, image_url="https://example.com/lost_keys.jpg")
+    l16 = LostItem(name="Lost Chairs", description="Grey fancy chair .", reward=100, place_lost="Wajir", user=u16, image_url="https://example.com/lost_phone.jpg")
+    l17 = LostItem(name="Lost Laptop", description="A black Hp laptop.", reward=50, place_lost="Marsabit", user=u17, image_url="https://example.com/lost_wallet.jpg")
+    l18 = LostItem(name="Lost Speaker", description="A black speaker.", reward=200, place_lost="Nandi", user=u18, image_url="https://example.com/lost_watch.jpg")
+    l19 = LostItem(name="Lost Table", description="An orange grey table .", reward=150, place_lost="Narok", user=u19, image_url="https://example.com/lost_bag.jpg")
+    l20 = LostItem(name="Lost Wifi", description="A white wifi .", reward=20, place_lost="Turkana", user=u20, image_url="https://example.com/lost_keys.jpg")
     
+
+    lost_items = [l1, l2, l3, l4, l5]
+    db.session.add_all(lost_items)
+    db.session.commit()
+
+   
