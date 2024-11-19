@@ -1,8 +1,8 @@
-"""Initial migration
+"""initial migration
 
-Revision ID: d9fb44426229
+Revision ID: d5fca4901967
 Revises: 
-Create Date: 2024-11-19 12:07:59.686594
+Create Date: 2024-11-19 14:27:18.435128
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'd9fb44426229'
+revision = 'd5fca4901967'
 down_revision = None
 branch_labels = None
 depends_on = None
