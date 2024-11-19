@@ -12,8 +12,9 @@ import os
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.urandom(24)  
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URI')
-app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
+# app.config['SECRET_KEY'] = os.getenv("SECRET_KEY")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 
@@ -28,6 +29,15 @@ api = Api(app)
 
 # Enable CORS
 CORS(app)
+
+class Home(Resource):
+    def __init__(self):
+        self.name = "Home"
+        self.description = "Welcome to the Lost and Found System"
+        
+    def get(self):
+        return {"message": "Welcome to the Lost and Found System!"}, 200
+        
 
 # User Registration
 class UserRegister(Resource):
@@ -52,12 +62,16 @@ class UserRegister(Resource):
 class UserLogin(Resource):
     def post(self):
         data = request.get_json()
-        user = User.query.filter_by(email=data["email"]).first()
-        if user and user.authenticate(data["password"]):
-            session["user_id"] = user.id
-            return make_response({"message": f"{user.username} logged in"}, 200)
-        return {"error": "Invalid credentials"}, 401
 
+        # Retrieve the user by email
+        user = User.query.filter_by(email=data["email"]).first()
+
+        if user and user.authenticate(data["password"]):
+            # Generate the JWT token
+            access_token = create_access_token(identity=user.id)
+            return make_response({"message": f"{user.username} logged in", "access_token": access_token}, 200)
+        
+        return {"error": "Invalid credentials"}, 401
 # LostItem Resource
 class LostItemResource(Resource):
     def get(self, item_id=None):
@@ -172,6 +186,7 @@ class AdminApproveClaim(Resource):
         return claim.to_dict(), 200
 
 # Register API Resources
+api.add_resource(Home, '/')
 api.add_resource(UserRegister, '/signup')
 api.add_resource(UserLogin, '/login')
 api.add_resource(LostItemResource, '/lostitems', '/lostitems/<int:item_id>')

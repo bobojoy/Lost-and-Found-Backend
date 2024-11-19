@@ -3,13 +3,10 @@ from sqlalchemy.orm import validates
 from sqlalchemy_serializer import SerializerMixin
 from sqlalchemy.ext.hybrid import hybrid_property
 from flask_bcrypt import Bcrypt
-# from sqlalchemy import MetaData
 from datetime import datetime
 
 # Set up database and bcrypt for password hashing
-# metadata = MetaData()
 db = SQLAlchemy() 
-# db = SQLAlchemy(metadata=metadata)
 bcrypt = Bcrypt()
 
 # User model
@@ -27,7 +24,16 @@ class User(db.Model, SerializerMixin):
     claims = db.relationship('Claim', back_populates='user', cascade='all, delete-orphan')
     reward_payments = db.relationship('RewardPayment', back_populates='user', cascade='all, delete-orphan')
 
-    serialize_rules = ("-lost_items.user", "-found_items.user", "-claims.user", "-reward_payments.user")
+    # Exclude related fields to avoid recursion
+    #serialize_rules = ("-lost_items.user", "-found_items.user", "-claims.user", "-reward_payments.user")
+    
+    serialize_rules = (
+        "-lost_items",
+        "-found_items",
+        "-claims",
+        "-reward_payments",
+        # Add any other relationships that might cause recursion
+    )
 
     @validates('email')
     def validate_email(self, key, value):
@@ -54,23 +60,6 @@ class User(db.Model, SerializerMixin):
 
     def authenticate(self, password):
         return bcrypt.check_password_hash(self._password_hash, password.encode('utf-8'))
-
-    def get_reported_items(self):
-        # Get both lost and found items reported by the user
-        return {"lost_items": self.lost_items, "found_items": self.found_items}
-
-    def claim_found_item(self, found_item):
-        claim = Claim(user=self, found_item=found_item)
-        db.session.add(claim)
-        db.session.commit()
-
-    def pay_reward(self, reward, amount):
-        payment = RewardPayment(user=self, reward=reward, amount=amount)
-        db.session.add(payment)
-        db.session.commit()
-
-    def get_reward_history(self):
-        return self.reward_payments
 
 
 # Admin model
@@ -84,7 +73,10 @@ class Admin(db.Model, SerializerMixin):
 
     # Relationships
     approved_reports = db.relationship('LostItem', back_populates='approved_by', cascade='all, delete-orphan')
-    
+
+    # Exclude related fields to avoid recursion
+    serialize_rules = ("-approved_reports.approved_by",)
+
     @validates('email')
     def validate_email(self, key, value):
         if '@' not in value:
@@ -99,6 +91,7 @@ class Admin(db.Model, SerializerMixin):
     def password_hash(self, password):
         password_hash = bcrypt.generate_password_hash(password.encode('utf-8'))
         self._password_hash = password_hash.decode('utf-8')
+
     @property
     def password(self):
         raise Exception('Password cannot be viewed.')
@@ -107,25 +100,8 @@ class Admin(db.Model, SerializerMixin):
     def password(self, password):
         self.password_hash = password
 
-
     def authenticate(self, password):
         return bcrypt.check_password_hash(self._password_hash, password.encode('utf-8'))
-
-    serialize_rules = ("-approved_reports.approved_by",)
-
-    
-    def approve_lost_item(self, lost_item):
-        lost_item.status = 'approved'
-        lost_item.approved_by = self
-        db.session.commit()
-
-    def update_found_item_image(self, found_item, image_url):
-        found_item.image_url = image_url
-        db.session.commit()
-
-    def get_reward_payment_history(self):
-        # View all reward payments made by users
-        return RewardPayment.query.all()
 
 
 # LostItem model
@@ -147,7 +123,16 @@ class LostItem(db.Model, SerializerMixin):
     approved_by = db.relationship('Admin', back_populates='approved_reports')
     claims = db.relationship('Claim', back_populates='lost_item')
 
-    serialize_rules = ("-user.lost_items", "-approved_by.approved_reports", "-claims.lost_item")
+    # Exclude related fields to avoid recursion
+    #serialize_rules = ("-user.lost_items", "-approved_by.approved_reports", "-claims.lost_item")
+    
+    serialize_rules = (
+        "-user",
+        "-approved_by",
+        "-claims",
+        # Add any other relationships that might cause recursion
+    )
+
 
 
 # FoundItem model
@@ -167,6 +152,7 @@ class FoundItem(db.Model, SerializerMixin):
     user = db.relationship('User', back_populates='found_items')
     claims = db.relationship('Claim', back_populates='found_item')
 
+    # Exclude related fields to avoid recursion
     serialize_rules = ("-user.found_items", "-claims.found_item")
 
 
@@ -185,6 +171,7 @@ class Claim(db.Model, SerializerMixin):
     found_item = db.relationship('FoundItem', back_populates='claims')
     lost_item = db.relationship('LostItem', back_populates='claims')
 
+    # Exclude related fields to avoid recursion
     serialize_rules = ("-user.claims", "-found_item.claims", "-lost_item.claims")
 
 
@@ -197,7 +184,6 @@ class Reward(db.Model, SerializerMixin):
     description = db.Column(db.String(255), nullable=False)
     points = db.Column(db.Integer, nullable=False)
 
-    
     reward_payments = db.relationship('RewardPayment', back_populates='reward', cascade='all, delete-orphan')
 
     serialize_rules = ('-reward_payments.reward',)
@@ -237,5 +223,6 @@ class Comment(db.Model, SerializerMixin):
     serialize_rules = ("-user.comments", "-lost_item.comments", "-found_item.comments")
 
 
+# Define reverse relationships for LostItem and FoundItem to avoid circular references
 LostItem.comments = db.relationship('Comment', back_populates='lost_item', cascade='all, delete-orphan')
 FoundItem.comments = db.relationship('Comment', back_populates='found_item', cascade='all, delete-orphan')
