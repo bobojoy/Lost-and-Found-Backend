@@ -84,6 +84,12 @@ class Admin(db.Model, SerializerMixin):
 
     # Relationships
     approved_reports = db.relationship('LostItem', back_populates='approved_by', cascade='all, delete-orphan')
+    
+    @validates('email')
+    def validate_email(self, key, value):
+        if '@' not in value:
+            raise ValueError('@ must be a valid email address')
+        return value
 
     @hybrid_property
     def password_hash(self):
@@ -93,6 +99,14 @@ class Admin(db.Model, SerializerMixin):
     def password_hash(self, password):
         password_hash = bcrypt.generate_password_hash(password.encode('utf-8'))
         self._password_hash = password_hash.decode('utf-8')
+    @property
+    def password(self):
+        raise Exception('Password cannot be viewed.')
+
+    @password.setter
+    def password(self, password):
+        self.password_hash = password
+
 
     def authenticate(self, password):
         return bcrypt.check_password_hash(self._password_hash, password.encode('utf-8'))
