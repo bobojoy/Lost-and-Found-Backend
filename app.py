@@ -86,7 +86,12 @@ class LostItemResource(Resource):
     # @jwt_required()
     def post(self):
         data = request.get_json()
-        user_id = get_jwt_identity()
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            
+            return {"error": "User ID is required"},
+        # user_id = get_jwt_identity()
         lost_item = LostItem(
             name=data['name'],
             description=data['description'],
