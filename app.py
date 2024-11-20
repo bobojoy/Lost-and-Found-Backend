@@ -184,10 +184,32 @@ class AdminApproveClaim(Resource):
         claim.is_approved = True
         db.session.commit()
         return claim.to_dict(), 200
+    
+class UserResource(Resource):
+    def get(self, user_id=None):
+        if user_id:
+            user = User.query.get(user_id)
+            if not user:
+                return {"error": "Lost item not found"}, 404
+            return user.to_dict(), 200
+        users = User.query.all()
+        return [user.to_dict() for user in users], 200
+    
+class AdminResource(Resource):
+    def get(self, admin_id=None):
+        if admin_id:
+            admin = Admin.query.get(admin_id)
+            if not admin:
+                return {"error": "Lost item not found"}, 404
+            return admin.to_dict(), 200
+        admins = Admin.query.all()
+        return [admin.to_dict() for admin in admins], 200    
 
 # Register API Resources
 api.add_resource(Home, '/')
 api.add_resource(UserRegister, '/signup')
+api.add_resource(UserResource, '/users')
+api.add_resource(AdminResource, '/admins')
 api.add_resource(UserLogin, '/login')
 api.add_resource(LostItemResource, '/lostitems', '/lostitems/<int:item_id>')
 api.add_resource(FoundItemResource, '/founditems', '/founditems/<int:item_id>')
