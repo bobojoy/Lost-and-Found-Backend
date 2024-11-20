@@ -83,7 +83,7 @@ class LostItemResource(Resource):
         items = LostItem.query.all()
         return [item.to_dict() for item in items], 200
 
-    @jwt_required()
+    # @jwt_required()
     def post(self):
         data = request.get_json()
         user_id = get_jwt_identity()
