@@ -208,7 +208,28 @@ class AdminResource(Resource):
                 return {"error": "Lost item not found"}, 404
             return admin.to_dict(), 200
         admins = Admin.query.all()
-        return [admin.to_dict() for admin in admins], 200    
+        return [admin.to_dict() for admin in admins], 200  
+class AdminApproveLostItem(Resource):
+    @jwt_required()
+    def post(self, item_id):
+        admin_id = get_jwt_identity()
+        admin = Admin.query.get(admin_id)
+
+        if not admin:
+            return {"error": "Admin privileges required"}, 403
+
+        lost_item = LostItem.query.get(item_id)
+        if not lost_item:
+            return {"error": "Lost item not found"}, 404
+
+        if lost_item.status != "pending":
+            return {"error": "Lost item already processed"}, 400
+
+        lost_item.status = "approved"
+        lost_item.approved_by_id = admin.id
+        db.session.commit()
+        return lost_item.to_dict(), 200
+  
 
 # Register API Resources
 api.add_resource(Home, '/')
@@ -221,6 +242,8 @@ api.add_resource(FoundItemResource, '/founditems', '/founditems/<int:item_id>')
 api.add_resource(ClaimItemResource, '/claim/<string:item_type>/<int:item_id>')
 api.add_resource(CommentResource, '/comments/<string:item_type>/<int:item_id>')
 api.add_resource(AdminApproveClaim, '/admin/claims/<int:claim_id>/approve')
+api.add_resource(AdminApproveLostItem, '/admin/lostitems/<int:item_id>/approve')
+
 
 # Run the app
 if __name__ == "__main__":
