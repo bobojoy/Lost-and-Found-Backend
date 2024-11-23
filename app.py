@@ -97,6 +97,7 @@ class LostItemResource(Resource):
             description=data['description'],
             place_lost=data['place_lost'],
             reward=data.get('reward'),
+            image_url=data['image_url'],
             user_id=user_id
         )
         db.session.add(lost_item)
@@ -160,7 +161,11 @@ class ClaimItemResource(Resource):
 
 # Comment Resource
 class CommentResource(Resource):
-    def post(self, item_type, item_id):
+     
+    
+    
+    
+     def post(self, item_type, item_id):
         data = request.get_json()
         user_id = get_jwt_identity()
         comment = Comment(
