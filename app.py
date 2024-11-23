@@ -103,7 +103,7 @@ class LostItemResource(Resource):
         db.session.commit()
         return lost_item.to_dict(), 201
 
-    @jwt_required()
+    # @jwt_required()
     def delete(self, item_id):
         lost_item = LostItem.query.get(item_id)
         if not lost_item:
