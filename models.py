@@ -35,7 +35,7 @@ class User(db.Model, SerializerMixin):
     )
 
     @validates('email')
-    def validate_email(self, key, value):
+    def validate_email(self, _, value):
         if '@' not in value:
             raise ValueError('@ must be a valid email address')
         return value
@@ -110,6 +110,7 @@ class LostItem(db.Model, SerializerMixin):
     name = db.Column(db.String(100), nullable=False)
     description = db.Column(db.String(255), nullable=False)
     status = db.Column(db.String(50), default='lost')  
+    
     reward = db.Column(db.Integer)
     place_lost = db.Column(db.String(100))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -139,7 +140,7 @@ class FoundItem(db.Model, SerializerMixin):
     description = db.Column(db.String(255), nullable=False)
     status = db.Column(db.String(50), default='found')  # found, claimed, etc.
     reward = db.Column(db.Integer)
-    place_found = db.Column(db.String(100))
+    place_lost = db.Column(db.String(100))
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     image_url = db.Column(db.String(255))
 
