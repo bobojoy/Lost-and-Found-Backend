@@ -229,9 +229,51 @@ class AdminApproveLostItem(Resource):
         lost_item.approved_by_id = admin.id
         db.session.commit()
         return lost_item.to_dict(), 200
-  
+class Example(Resource):
+ 
+    def get(self, item_id=None):
+        if item_id:
+            item = LostItem.query.get(item_id)
+            if not item:
+                return {"error": "Lost item not found"}, 404
+            return item.to_dict(), 200
+        items = LostItem.query.all()
+        return [item.to_dict() for item in items], 200
+
+    # @jwt_required()
+    def post(self):
+        data = request.get_json()
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            
+            return {"error": "User ID is required"},
+        # user_id = get_jwt_identity()
+        lost_item = LostItem(
+            name=data['name'],
+            description=data['description'],
+            place_lost=data['place_lost'],
+            reward=data.get('reward'),
+            user_id=user_id
+        )
+        db.session.add(lost_item)
+        db.session.commit()
+        return lost_item.to_dict(), 201
+
+    # @jwt_required()
+    def delete(self, item_id):
+        lost_item = LostItem.query.get(item_id)
+        if not lost_item:
+            return {"error": "Lost item not found"}, 404
+        db.session.delete(lost_item)
+        db.session.commit()
+        return {"message": "Lost item deleted"}, 200
+
+    
 
 # Register API Resources
+api.add_resource(Example, '/admins/lostitems', '/admins/lostitems/<int:item_id>')
+
 api.add_resource(Home, '/')
 api.add_resource(UserRegister, '/signup')
 api.add_resource(UserResource, '/users')
