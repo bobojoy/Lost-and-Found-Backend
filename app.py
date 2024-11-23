@@ -24,6 +24,8 @@ from models import db, bcrypt, User, Admin, LostItem, FoundItem, Claim, Comment
 db.init_app(app)
 bcrypt.init_app(app)
 migrate = Migrate(app, db)
+CORS(app, resources={r"/*": {"origins": ["https://lost-and-found-backend-qk8k.onrender.com"], "methods": ["GET", "POST", "DELETE"]}})
+
 jwt = JWTManager(app)
 api = Api(app)
 
@@ -69,6 +71,7 @@ class UserLogin(Resource):
         if user and user.authenticate(data["password"]):
             # Generate the JWT token
             access_token = create_access_token(identity=user.id)
+            session["user_id"] = user.id
             return make_response({"message": f"{user.username} logged in", "access_token": access_token}, 200)
         
         return {"error": "Invalid credentials"}, 401
@@ -161,11 +164,17 @@ class ClaimItemResource(Resource):
 
 # Comment Resource
 class CommentResource(Resource):
-     
     
+    def get(self, comment_id=None):
+        if comment_id:
+            comment = Comment.query.get(comment_id)
+            if not comment:
+                return {"error": "comment not found"}, 404
+            return comment.to_dict(), 200
+        comments = Comment.query.all()
+        return [comment.to_dict() for comment in comments], 200
     
-    
-     def post(self, item_type, item_id):
+    def post(self, item_type, item_id):
         data = request.get_json()
         user_id = get_jwt_identity()
         comment = Comment(
@@ -287,7 +296,7 @@ api.add_resource(UserLogin, '/login')
 api.add_resource(LostItemResource, '/lostitems', '/lostitems/<int:item_id>')
 api.add_resource(FoundItemResource, '/founditems', '/founditems/<int:item_id>')
 api.add_resource(ClaimItemResource, '/claim/<string:item_type>/<int:item_id>')
-api.add_resource(CommentResource, '/comments/<string:item_type>/<int:item_id>')
+api.add_resource(CommentResource, '/comments', '/comments/<int:item_id>')
 api.add_resource(AdminApproveClaim, '/admin/claims/<int:claim_id>/approve')
 api.add_resource(AdminApproveLostItem, '/admin/lostitems/<int:item_id>/approve')
 
