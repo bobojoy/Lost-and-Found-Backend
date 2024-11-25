@@ -1,8 +1,8 @@
-"""revert changes
+"""updated seed
 
-Revision ID: 71107b1e953e
+Revision ID: 551ecd10a804
 Revises: 
-Create Date: 2024-11-24 17:03:30.247052
+Create Date: 2024-11-25 10:39:00.639925
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '71107b1e953e'
+revision = '551ecd10a804'
 down_revision = None
 branch_labels = None
 depends_on = None
